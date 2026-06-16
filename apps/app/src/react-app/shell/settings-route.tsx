@@ -72,10 +72,8 @@ import { AuthorizedFoldersPanel } from "@/react-app/domains/settings/panels/auth
 import { SettingsStack } from "@/react-app/domains/settings/settings-section";
 import { AdvancedView } from "@/react-app/domains/settings/pages/advanced-view";
 import { AppearanceView } from "@/react-app/domains/settings/pages/appearance-view";
-import { CloudAccountView } from "@/react-app/domains/settings/pages/cloud-account-view";
 import { CloudMarketplacesView } from "@/react-app/domains/settings/pages/cloud-marketplaces-view";
 import { CloudProvidersView } from "@/react-app/domains/settings/pages/cloud-providers-view";
-import { CloudWorkersView } from "@/react-app/domains/settings/pages/cloud-workers-view";
 import { DebugView } from "@/react-app/domains/settings/pages/debug-view";
 import { EnvironmentView } from "@/react-app/domains/settings/pages/environment-view";
 import { ExtensionsView } from "@/react-app/domains/settings/pages/extensions-view";
@@ -246,13 +244,11 @@ function parseSettingsPath(pathname: string): {
     case "recovery":
     case "debug":
       return { tab: head, redirectPath: null };
-    case "cloud-account":
     case "cloud-marketplaces":
-    case "cloud-workers":
     case "cloud-providers":
       return { tab: head, redirectPath: null };
     case "den":
-      return { tab: "cloud-account", redirectPath: "cloud-account" };
+      return { tab: "general", redirectPath: "general" };
     case "extensions":
       if (tail === "mcp") return { tab: "extensions", redirectPath: null, extensionsSection: "mcp" };
       if (tail === "skills") return { tab: "extensions", redirectPath: null, extensionsSection: "all" };
@@ -725,8 +721,8 @@ function SettingsRouteContent(props: SettingsSurfaceProps = {}) {
   const subscribeToOpenWorkModels = useCallback(() => {
     providerAuthStore.closeProviderAuthModal();
     const accountPath = selectedWorkspaceId
-      ? workspaceSettingsRoute(selectedWorkspaceId, "cloud-account")
-      : "/settings/cloud-account";
+      ? workspaceSettingsRoute(selectedWorkspaceId, "general")
+      : "/settings/general";
     navigate(accountPath);
     window.setTimeout(() => {
       platform.openLink(getDenInferenceUrl(cloudSession.baseUrl));
@@ -1911,7 +1907,7 @@ function SettingsRouteContent(props: SettingsSurfaceProps = {}) {
   }
 
   const openCloudAccountSettings = () => {
-    navigateSettingsPath("cloud-account");
+    navigateSettingsPath("general");
   };
 
   const settingsView = (() => {
@@ -2073,13 +2069,6 @@ function SettingsRouteContent(props: SettingsSurfaceProps = {}) {
             }
           />
         );
-      case "cloud-account":
-        return (
-          <CloudAccountView
-            developerMode={developerMode}
-            session={denSession}
-          />
-        );
       case "cloud-marketplaces":
         return (
           <CloudMarketplacesView
@@ -2094,13 +2083,6 @@ function SettingsRouteContent(props: SettingsSurfaceProps = {}) {
             isBuiltInConnected={extensionController.isConnected}
             extensionItems={extensionItems.items}
             setBuiltInEnabled={setOpenWorkExtensionEnabled}
-          />
-        );
-      case "cloud-workers":
-        return (
-          <CloudWorkersView
-            connectRemoteWorkspace={async () => false}
-            onOpenAccount={openCloudAccountSettings}
           />
         );
       case "cloud-providers":

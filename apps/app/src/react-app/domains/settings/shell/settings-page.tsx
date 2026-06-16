@@ -65,12 +65,8 @@ export function getSettingsTabIcon(tab: SettingsTab) {
       return Layout;
     case "permissions":
       return FolderLock;
-    case "cloud-account":
-      return UserCircle;
     case "cloud-marketplaces":
       return Store;
-    case "cloud-workers":
-      return Container;
     case "cloud-providers":
       return CloudCog;
     case "skills":
@@ -104,12 +100,8 @@ export function getSettingsTabLabel(tab: SettingsTab) {
       return "Customization";
     case "permissions":
       return "Permissions";
-    case "cloud-account":
-      return t("settings.tab_cloud_account");
     case "cloud-marketplaces":
       return t("settings.tab_cloud_marketplaces");
-    case "cloud-workers":
-      return t("settings.tab_cloud_workers");
     case "cloud-providers":
       return t("settings.tab_cloud_providers");
     case "skills":
@@ -145,12 +137,8 @@ export function getSettingsTabDescription(tab: SettingsTab) {
       return "Branding, visibility, and shell controls";
     case "permissions":
       return "Authorized folders and file access";
-    case "cloud-account":
-      return t("settings.tab_description_cloud_account");
     case "cloud-marketplaces":
       return t("settings.tab_description_cloud_marketplaces");
-    case "cloud-workers":
-      return t("settings.tab_description_cloud_workers");
     case "cloud-providers":
       return t("settings.tab_description_cloud_providers");
     case "skills":
@@ -186,11 +174,6 @@ export function getGlobalSettingsTabs(developerMode: boolean): SettingsTab[] {
   return tabs;
 }
 
-export const CLOUD_SETTINGS_TABS: SettingsTab[] = [
-  "cloud-account",
-  "cloud-workers",
-];
-
 type SettingsPageProps = {
   activeTab: SettingsTab;
   onSelectTab: (tab: SettingsTab) => void;
@@ -219,7 +202,6 @@ type SettingsSidebarProps = Pick<SettingsPageProps, "activeTab" | "onSelectTab" 
 export function SettingsSidebar(props: SettingsSidebarProps) {
   const workspaceTabs = getWorkspaceSettingsTabs();
   const globalTabs = getGlobalSettingsTabs(props.developerMode);
-  const cloudTabs = CLOUD_SETTINGS_TABS;
 
   return (
     <Sidebar className="mac:**:data-[sidebar=sidebar]:bg-transparent">
@@ -306,29 +288,6 @@ export function SettingsSidebar(props: SettingsSidebarProps) {
           <SidebarGroupContent>
             <SidebarMenu>
               {globalTabs.map((tab) => {
-                const Icon = getSettingsTabIcon(tab);
-                return (
-                  <SidebarMenuItem key={tab}>
-                    <SidebarMenuButton
-                      type="button"
-                      isActive={props.activeTab === tab}
-                      onClick={() => props.onSelectTab(tab)}
-                    >
-                      <Icon />
-                      <span>{getSettingsTabLabel(tab)}</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <SidebarGroup>
-          <SidebarGroupLabel>{t("settings.group_cloud")}</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {cloudTabs.map((tab) => {
                 const Icon = getSettingsTabIcon(tab);
                 return (
                   <SidebarMenuItem key={tab}>

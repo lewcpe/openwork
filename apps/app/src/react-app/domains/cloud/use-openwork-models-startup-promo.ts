@@ -64,7 +64,7 @@ export function useOpenWorkModelsStartupPromo(input: UseOpenWorkModelsStartupPro
     setOpen(false);
     markOpenWorkModelsStartupPromoShown();
     if (!denAuth.isSignedIn) {
-      navigate(workspaceId ? workspaceSettingsRoute(workspaceId, "cloud-account") : "/settings/cloud-account");
+      navigate(workspaceId ? workspaceSettingsRoute(workspaceId, "general") : "/settings/general");
     }
     window.setTimeout(() => {
       platform.openLink(getOpenWorkModelsActionUrl(denAuth.isSignedIn));

@@ -21,7 +21,6 @@ import { t } from "../../../../i18n";
 import { NotificationBell } from "../../../shell/notification-center";
 import type { SettingsTab } from "../../../../app/types";
 import {
-  CLOUD_SETTINGS_TABS,
   SettingsPage,
   SettingsSidebar,
   getGlobalSettingsTabs,
@@ -166,7 +165,6 @@ function SettingsSectionMenu(props: Pick<SettingsPageFrameProps, "activeTab" | "
     { label: null, tabs: ["general"] },
     { label: t("settings.group_workspace"), tabs: getWorkspaceSettingsTabs() },
     { label: t("settings.group_global"), tabs: getGlobalSettingsTabs(props.developerMode) },
-    { label: t("settings.group_cloud"), tabs: CLOUD_SETTINGS_TABS },
   ];
   const ActiveIcon = getSettingsTabIcon(props.activeTab);
 
