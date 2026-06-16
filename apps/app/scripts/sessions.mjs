@@ -31,8 +31,34 @@ try {
   const after = await client.session.list({ limit: 20 });
   assert.ok(after.some((s) => s.id === created.id));
 
-  const messages = await client.session.messages({ sessionID: created.id, limit: 50 });
+  let messages = await client.session.messages({ sessionID: created.id, limit: 50 });
   assert.ok(Array.isArray(messages));
+
+  let gotReply = false;
+  if (process.env.OPENAI_API_KEY) {
+    console.log("Sending chat prompt to model...");
+    await client.session.prompt({
+      sessionID: created.id,
+      parts: [{ type: "text", text: "Hello! Say test." }],
+    });
+
+    console.log("Waiting for assistant reply...");
+    const start = Date.now();
+    while (Date.now() - start < 20_000) {
+      messages = await client.session.messages({ sessionID: created.id, limit: 50 });
+      const hasReply = messages.some(
+        (m) =>
+          (m.role === "assistant" || m.info?.role === "assistant") &&
+          (m.parts ?? []).some((p) => p.type === "text" && String(p.text ?? "").trim()),
+      );
+      if (hasReply) {
+        gotReply = true;
+        break;
+      }
+      await new Promise((r) => setTimeout(r, 500));
+    }
+    assert.ok(gotReply, "Timed out waiting for assistant reply");
+  }
 
   console.log(
     JSON.stringify({
@@ -41,6 +67,7 @@ try {
       created: { id: created.id, title: created.title },
       listCount: after.length,
       messagesCount: messages.length,
+      chatTested: gotReply,
     }),
   );
 } catch (e) {

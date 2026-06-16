@@ -1,236 +1,281 @@
 /** @jsxImportSource react */
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import type { ReactNode } from "react";
-import { ArrowRight, CheckCircle2, KeyRound, X } from "lucide-react";
+import { Eye, EyeOff, CheckCircle2, AlertCircle } from "lucide-react";
+import { toast } from "sonner";
 
-import { t } from "@/i18n";
-import { ProviderIcon } from "../../../design-system/provider-icon";
-import { SettingsNotice, SettingsStatusBadge } from "../settings-section";
+import { useLocal } from "@/react-app/kernel/local-provider";
+import { readOpencodeConfig, writeOpencodeConfig } from "@/app/lib/desktop";
 import {
   LayoutSection,
   LayoutSectionDescription,
   LayoutSectionHeader,
   LayoutSectionItem,
-  LayoutSectionItemFootnote,
-  LayoutSectionItemHeader,
-  LayoutSectionItemHeaderActions,
-  LayoutSectionItemTitle,
   LayoutSectionTitle,
   LayoutStack,
 } from "../settings-layout";
 
-type ConnectedProvider = {
-  id: string;
-  name: string;
-  source?: "env" | "api" | "config" | "custom";
-};
-
 export type AiSettingsViewProps = {
   busy: boolean;
-  providerAuthBusy: boolean;
-  providerStatusLabel: string;
-  providerStatusStyle: string;
-  providerSummary: string;
-  connectedProviders: ConnectedProvider[];
-  disconnectingProviderId: string | null;
-  providerConnectError: string | null;
-  providerDisconnectStatus: string | null;
-  providerDisconnectError: string | null;
-  onOpenProviderAuth: () => void | Promise<void>;
-  onDisconnectProvider: (providerId: string) => void | Promise<void>;
-  canDisconnectProvider: (source?: ConnectedProvider["source"]) => boolean;
-  /** Set of local provider IDs that were imported from cloud. */
-  cloudProviderIds?: Set<string>;
-  showOpenWorkModelsSubscribe?: boolean;
-  /** Subtle fallback row when OpenWork Models is not connected and the banner was dismissed. */
-  showOpenWorkModelsConnect?: boolean;
-  onSubscribeOpenWorkModels?: () => void | Promise<void>;
-  onDismissOpenWorkModels?: () => void | Promise<void>;
-  cloudProvidersView?: ReactNode;
+  openworkServerClient?: any;
+  workspaceId?: string;
+  workspaceRoot?: string;
 };
 
-function providerSourceLabel(source?: ConnectedProvider["source"]) {
-  if (source === "env") return t("settings.provider_source_env");
-  if (source === "api") return t("providers.api_key_label");
-  if (source === "config") return t("settings.provider_source_config");
-  if (source === "custom") return t("settings.provider_source_custom");
-  return null;
-}
-
-function providerStatusTone(label: string): "ready" | "warning" | "neutral" {
-  if (label.toLowerCase().includes("connected")) return "ready";
-  if (label.toLowerCase().includes("error") || label.toLowerCase().includes("fail")) return "warning";
-  return "neutral";
-}
-
 export function AiSettingsView(props: AiSettingsViewProps) {
+  const { prefs, setPrefs } = useLocal();
+  const [baseUrl, setBaseUrl] = useState(prefs.aiBaseUrl ?? "https://api.openai.com/v1");
+  const [apiKey, setApiKey] = useState(prefs.aiApiKey ?? "");
+  const [showKey, setShowKey] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null);
+
+  // Keep local input fields in sync if preferences load/change asynchronously
+  useEffect(() => {
+    if (prefs.aiBaseUrl) setBaseUrl(prefs.aiBaseUrl);
+    if (prefs.aiApiKey) setApiKey(prefs.aiApiKey);
+  }, [prefs.aiBaseUrl, prefs.aiApiKey]);
+
+  const handleSave = async () => {
+    const trimmedUrl = baseUrl.trim();
+    const trimmedKey = apiKey.trim();
+
+    if (!trimmedUrl) {
+      toast.error("Base URL is required");
+      return;
+    }
+
+    try {
+      // 1. Fetch the models list from the custom endpoint to register them in opencode
+      let modelsObj: Record<string, { name: string }> = {};
+      try {
+        const url = `${trimmedUrl.replace(/\/$/, "")}/models`;
+        const headers: Record<string, string> = {};
+        if (trimmedKey) {
+          headers["Authorization"] = `Bearer ${trimmedKey}`;
+        }
+        const res = await fetch(url, { headers });
+        if (res.ok) {
+          const json = await res.json();
+          if (Array.isArray(json.data)) {
+            for (const item of json.data) {
+              if (item && item.id) {
+                modelsObj[item.id] = { name: item.id };
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.warn("Failed to fetch models during save (proceeding anyway):", err);
+      }
+
+      // 2. Update client-side preferences
+      setPrefs((prev) => ({
+        ...prev,
+        aiBaseUrl: trimmedUrl,
+        aiApiKey: trimmedKey || null,
+      }));
+
+      // 3. Sync variables to the backend EnvStore so OpenCode picks them up
+      if (props.openworkServerClient) {
+        const envVars = [
+          { key: "OPENAI_BASE_URL", value: trimmedUrl },
+          { key: "OPENAI_API_KEY", value: trimmedKey },
+        ];
+        await props.openworkServerClient.upsertUserEnv(envVars);
+        
+        // Notify of pending change reload if available
+        if (typeof props.openworkServerClient.setUserEnvPendingChanges === "function") {
+          await props.openworkServerClient.setUserEnvPendingChanges(true);
+        }
+
+        // 4. Patch workspace config to write to OPENCODE_CONFIG file (runtime-opencode-config.json)
+        if (props.workspaceId && typeof props.openworkServerClient.patchConfig === "function") {
+          await props.openworkServerClient.patchConfig(props.workspaceId, {
+            opencode: {
+              provider: {
+                openai: null as any, // Clear any legacy openai custom provider overrides
+                "custom-openai": {
+                  id: "custom-openai",
+                  npm: "@ai-sdk/openai-compatible",
+                  name: "Custom AI Provider",
+                  options: {
+                    baseURL: trimmedUrl,
+                  },
+                  env: ["OPENAI_API_KEY"],
+                  models: modelsObj,
+                },
+              },
+            },
+          });
+        }
+      }
+
+      // 5. Clean up local workspace config file (opencode.json or opencode.jsonc) if available
+      if (props.workspaceRoot) {
+        try {
+          const configRes = await readOpencodeConfig("project", props.workspaceRoot);
+          if (configRes && configRes.content) {
+            const parsed = JSON.parse(configRes.content);
+            if (parsed) {
+              parsed.provider = parsed.provider || {};
+              // Clear any legacy custom provider overrides on openai
+              delete parsed.provider.openai;
+              
+              // Write the new custom-openai configuration
+              parsed.provider["custom-openai"] = {
+                id: "custom-openai",
+                npm: "@ai-sdk/openai-compatible",
+                name: "Custom AI Provider",
+                options: {
+                  baseURL: trimmedUrl,
+                },
+                env: ["OPENAI_API_KEY"],
+                models: modelsObj,
+              };
+              await writeOpencodeConfig("project", props.workspaceRoot, JSON.stringify(parsed, null, 2));
+            }
+          }
+        } catch (e) {
+          console.warn("Failed to clean local opencode.json config file:", e);
+        }
+      }
+
+      toast.success("AI Configuration saved successfully!");
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to save configuration to the server.");
+    }
+  };
+
+  const handleTestConnection = async () => {
+    const trimmedUrl = baseUrl.trim();
+    const trimmedKey = apiKey.trim();
+
+    if (!trimmedUrl) {
+      toast.error("Please enter a Base URL first.");
+      return;
+    }
+
+    setTesting(true);
+    setTestResult(null);
+
+    try {
+      const url = `${trimmedUrl.replace(/\/$/, "")}/models`;
+      const headers: Record<string, string> = {};
+      if (trimmedKey) {
+        headers["Authorization"] = `Bearer ${trimmedKey}`;
+      }
+
+      const res = await fetch(url, { headers });
+      if (!res.ok) {
+        throw new Error(`Server returned status ${res.status}`);
+      }
+
+      const data = await res.json();
+      const modelsCount = Array.isArray(data.data) ? data.data.length : 0;
+      setTestResult({
+        ok: true,
+        message: `Successfully connected! Found ${modelsCount} available models.`,
+      });
+      toast.success("Connection test succeeded!");
+    } catch (err: any) {
+      setTestResult({
+        ok: false,
+        message: `Failed to connect: ${err.message || String(err)}`,
+      });
+      toast.error("Connection test failed.");
+    } finally {
+      setTesting(false);
+    }
+  };
+
   return (
     <LayoutStack>
-      {/* ---- Providers ---- */}
       <LayoutSection>
         <LayoutSectionHeader>
-          <LayoutSectionTitle>{t("settings.providers_title")}</LayoutSectionTitle>
-          <LayoutSectionDescription>{t("settings.providers_desc")}</LayoutSectionDescription>
+          <LayoutSectionTitle>AI Model Configuration</LayoutSectionTitle>
+          <LayoutSectionDescription>
+            Configure your single OpenAI-compatible base URL and API key. OpenWork will query this endpoint for available models and direct all LLM executions through it.
+          </LayoutSectionDescription>
         </LayoutSectionHeader>
 
-        <LayoutSectionItem>
-          <LayoutSectionItemHeader>
-            <LayoutSectionItemTitle>
-              {props.providerSummary}
-              <SettingsStatusBadge
-                tone={providerStatusTone(props.providerStatusLabel)}
-                label={props.providerStatusLabel}
-              />
-            </LayoutSectionItemTitle>
-            <LayoutSectionItemHeaderActions>
-              <Button
-                onClick={() => void props.onOpenProviderAuth()}
-                disabled={props.busy || props.providerAuthBusy}
-              >
-                {props.providerAuthBusy
-                  ? t("settings.loading_providers")
-                  : t("settings.connect_provider")}
-              </Button>
-            </LayoutSectionItemHeaderActions>
-          </LayoutSectionItemHeader>
-        </LayoutSectionItem>
-
-        {props.showOpenWorkModelsSubscribe ? (
-          <LayoutSectionItem className="relative overflow-hidden rounded-2xl border border-blue-6 bg-blue-2/30 px-4 py-4">
-            <button
-              type="button"
-              className="absolute right-3 top-3 flex size-7 items-center justify-center rounded-full text-blue-11 transition-colors hover:bg-blue-3/70"
-              onClick={() => void props.onDismissOpenWorkModels?.()}
-              aria-label="Dismiss OpenWork Models banner"
-            >
-              <X className="size-3.5" />
-            </button>
-            <div className="flex flex-col gap-4 pr-8 sm:flex-row sm:items-start sm:justify-between">
-              <div className="flex min-w-0 gap-3">
-                <ProviderIcon providerId="openwork" size={22} className="mt-0.5 shrink-0 text-blue-11" />
-                <div className="min-w-0 space-y-2">
-                  <div>
-                    <div className="text-sm font-medium text-dls-text">OpenWork Models</div>
-                    <div className="mt-0.5 text-xs text-muted-foreground">
-                      Hosted frontier models for OpenWork tasks without managing provider API keys.
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap gap-2 text-[11px] text-blue-11">
-                    <span className="inline-flex items-center gap-1 rounded-full border border-blue-6 bg-blue-3 px-2 py-0.5">
-                      <CheckCircle2 className="size-3" /> Managed by OpenWork Cloud
-                    </span>
-                    <span className="inline-flex items-center gap-1 rounded-full border border-blue-6 bg-blue-3 px-2 py-0.5">
-                      <KeyRound className="size-3" /> No API key setup
-                    </span>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Pricing is handled through OpenWork Cloud. You can continue using OpenCode Zen or your own providers.
-                  </p>
-                </div>
-              </div>
-              <Button
-                className="shrink-0"
-                onClick={() => void props.onSubscribeOpenWorkModels?.()}
-                disabled={props.busy || props.providerAuthBusy}
-              >
-                Subscribe
-                <ArrowRight className="ml-1.5 size-3.5" />
-              </Button>
-            </div>
-          </LayoutSectionItem>
-        ) : null}
-
-        {props.connectedProviders.length > 0 ? (
+        <LayoutSectionItem className="flex flex-col gap-4 p-6 bg-dls-sidebar/20 border border-dls-border rounded-xl">
           <div className="space-y-2">
-            {props.connectedProviders.map((provider) => (
-              <LayoutSectionItem
-                key={provider.id}
-                className="flex-row flex-wrap items-center justify-between gap-3 rounded-2xl border border-dls-border px-4 py-3"
-              >
-                <div className="flex min-w-0 items-center gap-3">
-                  <ProviderIcon providerId={provider.id} size={20} className="text-dls-text" />
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="truncate text-sm font-medium text-dls-text">{provider.name}</span>
-                      {props.cloudProviderIds?.has(provider.id) ? (
-                        <span className="shrink-0 rounded-full border border-blue-6 bg-blue-2 px-2 py-0.5 text-[10px] font-medium text-blue-11">
-                          Cloud
-                        </span>
-                      ) : null}
-                      {provider.source === "env" ? (
-                        <span className="shrink-0 rounded-full border border-amber-6 bg-amber-2 px-2 py-0.5 text-[10px] font-medium text-amber-11">
-                          {providerSourceLabel("env")}
-                        </span>
-                      ) : null}
-                    </div>
-                    <div className="truncate font-mono text-xs text-muted-foreground">{provider.id}</div>
-                  </div>
-                </div>
-                {!props.cloudProviderIds?.has(provider.id) ? (
-                  <Button
-                    variant="destructive"
-                    onClick={() => void props.onDisconnectProvider(provider.id)}
-                    disabled={
-                      props.busy ||
-                      props.providerAuthBusy ||
-                      props.disconnectingProviderId !== null ||
-                      !props.canDisconnectProvider(provider.source)
-                    }
-                  >
-                    {props.disconnectingProviderId === provider.id
-                      ? t("settings.disconnecting")
-                      : props.canDisconnectProvider(provider.source)
-                        ? t("settings.disconnect")
-                        : t("settings.managed_by_env")}
-                  </Button>
-                ) : null}
-              </LayoutSectionItem>
-            ))}
+            <label className="text-sm font-medium text-dls-text">API Base URL</label>
+            <input
+              type="text"
+              className="w-full px-3 py-2 text-sm bg-background border border-dls-border rounded-md focus:outline-none focus:ring-1 focus:ring-primary font-mono"
+              placeholder="e.g. https://api.openai.com/v1"
+              value={baseUrl}
+              onChange={(e) => setBaseUrl(e.target.value)}
+              disabled={props.busy}
+            />
+            <p className="text-xs text-muted-foreground">
+              The endpoint URL for the API (e.g. OpenRouter, Local Ollama, DeepSeek, or OpenAI).
+            </p>
           </div>
-        ) : null}
 
-        {props.showOpenWorkModelsConnect ? (
-          <LayoutSectionItem className="flex-row flex-wrap items-center justify-between gap-3 rounded-2xl border border-dashed border-dls-border px-4 py-3">
-            <div className="flex min-w-0 items-center gap-3">
-              <ProviderIcon providerId="openwork" size={20} className="text-muted-foreground" />
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="truncate text-sm font-medium text-dls-text">OpenWork Models</span>
-                  <span className="shrink-0 rounded-full border border-dls-border bg-dls-sidebar/40 px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
-                    Not connected
-                  </span>
-                </div>
-                <div className="truncate text-xs text-muted-foreground">
-                  Hosted frontier models without managing API keys.
-                </div>
-              </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-dls-text">API Key</label>
+            <div className="relative">
+              <input
+                type={showKey ? "text" : "password"}
+                className="w-full pl-3 pr-10 py-2 text-sm bg-background border border-dls-border rounded-md focus:outline-none focus:ring-1 focus:ring-primary font-mono"
+                placeholder="sk-..."
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                disabled={props.busy}
+              />
+              <button
+                type="button"
+                className="absolute right-3 top-2.5 text-muted-foreground hover:text-dls-text"
+                onClick={() => setShowKey(!showKey)}
+              >
+                {showKey ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+              </button>
             </div>
+            <p className="text-xs text-muted-foreground">
+              Your secret key for authentication. Leave blank if the API endpoint does not require one.
+            </p>
+          </div>
+
+          <div className="flex gap-3 pt-2">
             <Button
-              variant="outline"
-              onClick={() => void props.onSubscribeOpenWorkModels?.()}
-              disabled={props.busy || props.providerAuthBusy}
+              type="button"
+              onClick={handleSave}
+              disabled={props.busy || testing}
             >
-              Connect
-              <ArrowRight className="ml-1.5 size-3.5" />
+              Save Configuration
             </Button>
-          </LayoutSectionItem>
-        ) : null}
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleTestConnection}
+              disabled={props.busy || testing}
+            >
+              {testing ? "Testing..." : "Test Connection"}
+            </Button>
+          </div>
 
-        {props.providerConnectError ? (
-          <SettingsNotice tone="error">{props.providerConnectError}</SettingsNotice>
-        ) : null}
-        {props.providerDisconnectStatus ? (
-          <SettingsNotice>{props.providerDisconnectStatus}</SettingsNotice>
-        ) : null}
-        {props.providerDisconnectError ? (
-          <SettingsNotice tone="error">{props.providerDisconnectError}</SettingsNotice>
-        ) : null}
-
-        <LayoutSectionItemFootnote>{t("settings.api_keys_info")}</LayoutSectionItemFootnote>
+          {testResult && (
+            <div
+              className={`flex items-start gap-2.5 p-3 rounded-lg border text-sm mt-2 ${
+                testResult.ok
+                  ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400"
+                  : "bg-destructive/10 border-destructive/30 text-destructive"
+              }`}
+            >
+              {testResult.ok ? (
+                <CheckCircle2 className="size-4 shrink-0 mt-0.5" />
+              ) : (
+                <AlertCircle className="size-4 shrink-0 mt-0.5" />
+              )}
+              <span>{testResult.message}</span>
+            </div>
+          )}
+        </LayoutSectionItem>
       </LayoutSection>
-
-      {props.cloudProvidersView}
-
     </LayoutStack>
   );
 }

@@ -7,6 +7,7 @@ import { createManagedOpencodeServer, type ManagedOpencodeServer } from "./manag
 import { createServerLogger, startServer, syncAllWorkspacesRuntimeMcpToEngine } from "./server.js";
 import { ensureWorkspaceFiles } from "./workspace-init.js";
 import { keepOpenworkRuntimeConfigFileFresh, writeOpenworkRuntimeConfigFile } from "./openwork-runtime-config.js";
+import { EnvService } from "./env-file.js";
 import pkg from "../package.json" with { type: "json" };
 
 const args = parseCliArgs(process.argv.slice(2));
@@ -47,6 +48,7 @@ if (!config.opencodeBaseUrl && process.env.OPENWORK_MANAGE_OPENCODE === "1") {
       cwd: managedOpencodeCwd,
       excludedPorts: [config.port],
       env: {
+        ...(await EnvService.readForInjection()),
         ...(process.env.OPENWORK_DEV_MODE ? { OPENWORK_DEV_MODE: process.env.OPENWORK_DEV_MODE } : {}),
         ...(process.env.OPENWORK_UI_CONTROL_DISCOVERY ? { OPENWORK_UI_CONTROL_DISCOVERY: process.env.OPENWORK_UI_CONTROL_DISCOVERY } : {}),
         OPENWORK_SERVER_URL: serverUrl,

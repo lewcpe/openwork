@@ -24,6 +24,8 @@ export type LocalPreferences = {
   showThinking: boolean;
   modelVariant: string | null;
   defaultModel: ModelRef | null;
+  aiBaseUrl: string | null;
+  aiApiKey: string | null;
   /**
    * Name of the opencode agent used for new prompts (null = the server's
    * default, usually "build"). Persisted so a reload does not silently
@@ -71,6 +73,8 @@ const INITIAL_PREFS: LocalPreferences = {
   showThinking: DEFAULT_SHOW_THINKING,
   modelVariant: null,
   defaultModel: null,
+  aiBaseUrl: null,
+  aiApiKey: null,
   selectedAgent: null,
   releaseChannel: "stable",
   featureFlags: { microsandboxCreateSandbox: true },

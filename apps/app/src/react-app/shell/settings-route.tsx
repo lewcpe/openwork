@@ -1948,39 +1948,9 @@ function SettingsRouteContent(props: SettingsSurfaceProps = {}) {
         return (
           <AiSettingsView
             busy={busy}
-            providerAuthBusy={providerAuthSnapshot.providerAuthBusy}
-            providerStatusLabel={providerStatusLabel}
-            providerStatusStyle={providerStatusStyle}
-            providerSummary={providerSummary}
-            connectedProviders={connectedProviders}
-            disconnectingProviderId={null}
-            providerConnectError={providerAuthSnapshot.providerAuthError}
-            providerDisconnectStatus={configActionStatus}
-            providerDisconnectError={null}
-            onOpenProviderAuth={handleOpenProviderAuth}
-            onDisconnectProvider={async (providerId) => {
-              await providerAuthStore.disconnectProvider(providerId);
-            }}
-            canDisconnectProvider={(source) => source !== "env"}
-            cloudProviderIds={new Set(
-              Object.values(providerAuthSnapshot.importedCloudProviders ?? {}).map((p) => p.providerId)
-            )}
-            showOpenWorkModelsSubscribe={showOpenWorkModelsSubscribe}
-            showOpenWorkModelsConnect={showOpenWorkModelsConnect}
-            onSubscribeOpenWorkModels={subscribeToOpenWorkModels}
-            onDismissOpenWorkModels={dismissOpenWorkModelsPromo}
-            cloudProvidersView={
-              <CloudProvidersView
-                embedded
-                cloudOrgProviders={providerAuthSnapshot.cloudOrgProviders}
-                connectCloudProvider={providerAuthStore.connectCloudProvider}
-                importedCloudProviders={providerAuthSnapshot.importedCloudProviders}
-                onOpenAccount={openCloudAccountSettings}
-                refreshCloudOrgProviders={providerAuthStore.refreshCloudOrgProviders}
-                removeCloudProvider={providerAuthStore.removeCloudProvider}
-                session={denSession}
-              />
-            }
+            openworkServerClient={openworkClient}
+            workspaceId={selectedWorkspaceId}
+            workspaceRoot={selectedWorkspaceRoot}
           />
         );
       case "preferences":

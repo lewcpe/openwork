@@ -1719,10 +1719,16 @@ function createRoutes(
       const providerUpdate = ensurePlainObject(provider);
       if (Object.keys(providerUpdate).length) {
         const currentRuntime = await readRuntimeOpencodeConfig(config, workspace.id);
-        logicalUpdates.provider = {
+        const mergedProvider = {
           ...(ensurePlainObject(currentRuntime.provider)),
           ...providerUpdate,
-        };
+        } as Record<string, any>;
+        for (const key of Object.keys(mergedProvider)) {
+          if (mergedProvider[key] === null || mergedProvider[key] === undefined) {
+            delete mergedProvider[key];
+          }
+        }
+        logicalUpdates.provider = mergedProvider;
       }
 
       const permissionUpdate = ensurePlainObject(permission);

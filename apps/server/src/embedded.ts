@@ -11,6 +11,7 @@ import { createManagedOpencodeServer, type ManagedOpencodeServer, type OpencodeE
 import { startServer, syncAllWorkspacesRuntimeMcpToEngine } from "./server.js";
 import { ensureWorkspaceFiles } from "./workspace-init.js";
 import { keepOpenworkRuntimeConfigFileFresh, writeOpenworkRuntimeConfigFile } from "./openwork-runtime-config.js";
+import { EnvService } from "./env-file.js";
 import type { ServeResult } from "./serve-node.js";
 import type { ServerConfig } from "./types.js";
 
@@ -70,6 +71,7 @@ export async function startEmbeddedServer(options: EmbeddedServerOptions): Promi
         cwd,
         excludedPorts: [config.port],
         env: {
+          ...(await EnvService.readForInjection()),
           ...(process.env.OPENWORK_DEV_MODE ? { OPENWORK_DEV_MODE: process.env.OPENWORK_DEV_MODE } : {}),
           ...(process.env.OPENWORK_UI_CONTROL_DISCOVERY ? { OPENWORK_UI_CONTROL_DISCOVERY: process.env.OPENWORK_UI_CONTROL_DISCOVERY } : {}),
           OPENWORK_SERVER_URL: serverUrl,
