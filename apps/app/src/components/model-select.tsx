@@ -302,7 +302,7 @@ export function ModelSelect({
           }
         >
           <span className="max-w-48 truncate">
-            {selectedOption?.title ?? value.modelID ?? "Select model"}
+            {selectedOption?.title ?? (value.modelID || "No Model Available")}
           </span>
           <ChevronDown className="h-3 w-3" />
         </TooltipTrigger>

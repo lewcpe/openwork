@@ -16,10 +16,7 @@ export const VARIANT_PREF_KEY = "openwork.modelVariant";
 export { LANGUAGE_PREF_KEY } from "../i18n";
 export const HIDE_TITLEBAR_PREF_KEY = "openwork.hideTitlebar";
 
-export const DEFAULT_MODEL: ModelRef = {
-  providerID: "opencode",
-  modelID: "big-pickle",
-};
+export const DEFAULT_MODEL: ModelRef | null = null;
 
 export const SUGGESTED_PLUGINS: SuggestedPlugin[] = [];
 

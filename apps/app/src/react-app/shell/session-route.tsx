@@ -580,7 +580,7 @@ export function SessionRoute() {
   );
   const hasUsableModel = Boolean(local.prefs.defaultModel && !selectedModelUnavailable);
   const canCreateTask = Boolean(
-    opencodeClient && selectedWorkspaceId && !loading && !selectedWorkspaceError && !selectedModelUnavailable,
+    opencodeClient && selectedWorkspaceId && !loading && !selectedWorkspaceError && !selectedModelUnavailable && hasUsableModel,
   );
 
   const openWorkModelsPromo = useOpenWorkModelsStartupPromo({
