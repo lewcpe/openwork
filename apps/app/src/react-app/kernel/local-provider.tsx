@@ -79,7 +79,7 @@ const INITIAL_PREFS: LocalPreferences = {
   releaseChannel: "stable",
   featureFlags: { microsandboxCreateSandbox: true },
   hasCompletedOnboarding: false,
-  analyticsEnabled: true,
+  analyticsEnabled: false,
 };
 
 function readPersisted<T>(key: string, fallback: T): T {

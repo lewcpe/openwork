@@ -20,16 +20,9 @@ const ENV_POSTHOG_KEY = String(import.meta.env.VITE_OPENWORK_POSTHOG_KEY ?? "").
 const ENV_POSTHOG_HOST = String(import.meta.env.VITE_OPENWORK_POSTHOG_HOST ?? "").trim();
 const ENV_APP_VERSION = String(import.meta.env.VITE_OPENWORK_APP_VERSION ?? "").trim();
 
-// Same public project key the landing page and den-web use; PostHog client
-// keys are publishable by design. Override or blank via VITE_OPENWORK_POSTHOG_KEY.
-const DEFAULT_POSTHOG_KEY = "phc_4YnPTlDVYPjgwKvLuNxhbHjV5kadgvd7XLzVHWnCXAI";
-const DEFAULT_POSTHOG_HOST = "https://us.i.posthog.com";
-
-// Dev builds send nothing unless a key is explicitly provided, so local
-// runs, CI, and evals never pollute production analytics. The inspector
-// mirror still records events locally either way.
-const POSTHOG_KEY = ENV_POSTHOG_KEY || (import.meta.env.DEV ? "" : DEFAULT_POSTHOG_KEY);
-const POSTHOG_HOST = (ENV_POSTHOG_HOST || DEFAULT_POSTHOG_HOST).replace(/\/+$/, "");
+// Override via VITE_OPENWORK_POSTHOG_KEY. No default key — analytics disabled unless explicitly configured.
+const POSTHOG_KEY = ENV_POSTHOG_KEY || "";
+const POSTHOG_HOST = (ENV_POSTHOG_HOST || "https://us.i.posthog.com").replace(/\/+$/, "");
 
 const PREFS_STORAGE_KEY = "openwork.preferences";
 const DISTINCT_ID_STORAGE_KEY = "openwork.analytics.distinctId";
@@ -52,14 +45,14 @@ export function isAnalyticsEnabled(): boolean {
   if (typeof window === "undefined") return false;
   try {
     const raw = window.localStorage.getItem(PREFS_STORAGE_KEY);
-    if (!raw) return true;
+    if (!raw) return false;
     const parsed: unknown = JSON.parse(raw);
     if (parsed && typeof parsed === "object" && "analyticsEnabled" in parsed) {
-      return (parsed as { analyticsEnabled?: unknown }).analyticsEnabled !== false;
+      return (parsed as { analyticsEnabled?: unknown }).analyticsEnabled === true;
     }
-    return true;
+    return false;
   } catch {
-    return true;
+    return false;
   }
 }
 
