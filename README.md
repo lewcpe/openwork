@@ -203,6 +203,60 @@ WEBKIT_DISABLE_DMABUF_RENDERER=1 openwork
 WEBKIT_DISABLE_COMPOSITING_MODE=1 openwork
 ```
 
+## Resetting Settings
+
+OpenWork stores application data in several locations. To start fresh, quit the app and remove:
+
+**macOS:**
+```bash
+rm -rf ~/Library/Application\ Support/com.differentai.openwork
+rm -rf ~/.config/openwork
+rm -rf ~/.config/opencode
+rm -rf ~/.local/share/opencode
+rm -rf ~/.openwork
+```
+
+**Linux:**
+```bash
+rm -rf ~/.config/openwork
+rm -rf ~/.config/opencode
+rm -rf ~/.local/share/opencode
+rm -rf ~/.openwork
+```
+
+**Windows (PowerShell):**
+```powershell
+Remove-Item -Recurse -Force "$env:APPDATA\openwork"
+Remove-Item -Recurse -Force "$env:APPDATA\com.differentai.openwork"
+Remove-Item -Recurse -Force "$env:LOCALAPPDATA\opencode"
+```
+
+### Storage Locations by Purpose
+
+| Path | Contents |
+|------|----------|
+| `~/.config/openwork/server.json` | Server config (ports, workspaces, tokens) |
+| `~/.config/openwork/env.json` | Environment variables (API keys) |
+| `~/.config/openwork/runtime.sqlite` | Runtime config, session groups, plugins |
+| `~/.config/opencode/` | Global OpenCode config and skills |
+| `~/.local/share/opencode/opencode.db` | OpenCode session/message database |
+| `~/.openwork/` | Orchestrator and router data |
+| `~/Library/Application Support/com.differentai.openwork/` (macOS) | Workspace list, server state, UI config |
+
+### Selective Reset
+
+To reset only specific settings without clearing sessions or installed skills:
+```bash
+# Server and AI config only
+rm ~/.config/openwork/server.json
+rm ~/.config/openwork/env.json
+rm ~/.config/openwork/runtime.sqlite
+
+# UI preferences only (run from browser console in dev, or clear localStorage in packaged app)
+localStorage.removeItem("openwork.preferences")
+localStorage.removeItem("openwork.shell-config")
+```
+
 ## Security Notes
 
 - OpenWork hides model reasoning and sensitive tool metadata by default.
