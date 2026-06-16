@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useWorkspace } from "@/react-app/shell/workspace-provider";
 import { usePlatform } from "@/react-app/kernel/platform";
+import { useLocal } from "@/react-app/kernel/local-provider";
 import { useCheckDesktopRestriction } from "@/react-app/domains/cloud/desktop-config-provider";
 import { useDenAuth } from "@/react-app/domains/cloud/den-auth-provider";
 import {
@@ -57,6 +58,7 @@ function getProviderDisplayName(providerId: string) {
 function useModelOptions(open: boolean) {
   const { client, opencodeBaseUrl, selectedWorkspaceRoot } = useWorkspace();
   const checkDesktopRestriction = useCheckDesktopRestriction();
+  const { prefs } = useLocal();
 
   const { data, refetch } = useProviderListQuery({
     client,
@@ -84,13 +86,19 @@ function useModelOptions(open: boolean) {
       restriction: "allowCustomProviders",
     });
 
+    const hasCustomProvider = Boolean(prefs.aiBaseUrl?.trim());
+
     const options = getConnectedProviderItems(data)
+      .filter((provider) => {
+        if (!hasCustomProvider) return true;
+        return provider.id === "custom-openai";
+      })
       .flatMap((provider) =>
         Object.entries(provider.models).map(([id, model]) => ({
           providerID: provider.id,
           modelID: id,
           title: model.name,
-          description: provider.name,
+          description: hasCustomProvider ? "Custom AI Provider" : provider.name,
           behaviorTitle: "Reasoning",
           behaviorLabel: "Default",
           behaviorDescription: "",
@@ -116,7 +124,7 @@ function useModelOptions(open: boolean) {
 
       return true;
     });
-  }, [checkDesktopRestriction, data]);
+  }, [checkDesktopRestriction, data, prefs.aiBaseUrl]);
 }
 
 type ModelSelectModelItem = {
