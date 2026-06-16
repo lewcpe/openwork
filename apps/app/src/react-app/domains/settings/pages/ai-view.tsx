@@ -6,6 +6,8 @@ import { toast } from "sonner";
 
 import { useLocal } from "@/react-app/kernel/local-provider";
 import { readOpencodeConfig, writeOpencodeConfig } from "@/app/lib/desktop";
+import { refreshProviderListQueries } from "@/react-app/infra/provider-list-query";
+import { getReactQueryClient } from "@/react-app/infra/query-client";
 import {
   LayoutSection,
   LayoutSectionDescription,
@@ -142,6 +144,7 @@ export function AiSettingsView(props: AiSettingsViewProps) {
       }
 
       toast.success("AI Configuration saved successfully!");
+      void refreshProviderListQueries(getReactQueryClient());
     } catch (err) {
       console.error(err);
       toast.error("Failed to save configuration to the server.");

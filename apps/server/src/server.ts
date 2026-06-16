@@ -1778,6 +1778,12 @@ function createRoutes(
 
     if (opencode) {
       emitReloadEvent(ctx.reloadEvents, workspace, "config", buildConfigTrigger(openworkConfigPath(workspace.path)));
+      void reloadOpencodeEngine(config, workspace).catch((err) => {
+        createServerLogger(config).log("warn", "Failed to reload OpenCode engine after config patch", {
+          workspaceId: workspace.id,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      });
     }
 
     return jsonResponse({ updatedAt: Date.now() });
