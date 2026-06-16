@@ -1,11 +1,11 @@
 # OpenWork
 
-OpenWork is a free, open-source desktop app (macOS, Windows, Linux) for doing work with AI agents on your own files — the open source alternative to Claude Cowork and Codex. Bring any of 50+ LLMs with your own provider keys, extend agents with skills, plugins, and MCP servers, and share complete setups with your team in one link.
+OpenWork is a free, open-source desktop app (macOS, Windows, Linux) for doing work with AI agents on your own files — the open source alternative to Claude Cowork and Codex. Bring any LLM with your own provider key, extend agents with skills, plugins, and MCP servers, and share complete setups with your team in one link.
 
 
 ## Core Philosophy
 
-- Local-first, cloud-ready: OpenWork runs on your machine in one click. Send a message instantly.
+- Local-first: OpenWork runs on your machine in one click. Send a message instantly.
 - Composable: desktop app, Slack/Telegram connector, or server. Use what fits, no lock-in.
 - Ejectable: OpenWork is powered by OpenCode, so everything OpenCode can do works in OpenWork, even without a UI yet.
 - Sharing is caring: start solo on localhost, then explicitly opt into remote sharing when you need it.
@@ -16,10 +16,14 @@ OpenWork is a free, open-source desktop app (macOS, Windows, Linux) for doing wo
 
 OpenWork is designed around the idea that you can easily ship your agentic workflows for your team as a repeatable, productized process.
 
-> [!TIP]
-> **Looking for an [Enterprise Plan](https://openworklabs.com/enterprise)?** [Speak with our Sales Team today](https://calendar.app.google/86QpCENvhfEzDFLu5)
->
-> Get enhanced capabilities including feature prioritization, SSO, SLA support, LTS versions, and more.
+## This Fork: Key Changes
+
+This fork of OpenWork removes cloud service dependencies and telemetry, and simplifies AI provider configuration:
+
+- **Custom AI Provider**: Configure any OpenAI-compatible API (OpenRouter, Ollama, DeepSeek, etc.) directly from Settings > AI using just a base URL and API key. No manual `opencode.json` editing required.
+- **No Telemetry**: All analytics and tracking (PostHog) have been removed. No usage data is collected or sent anywhere.
+- **No Cloud UI**: Sign In buttons, Feedback button, Account settings, and Cloud Workers have been removed from the interface.
+- **ProviderModelNotFoundError Fix**: Resolved an issue where custom provider models weren't being recognized by OpenCode, ensuring seamless LLM integration.
 
 ## Alternate UIs
 - **OpenWork Orchestrator (CLI host)**: run OpenCode + OpenWork server without the desktop UI.
@@ -29,19 +33,11 @@ OpenWork is designed around the idea that you can easily ship your agentic workf
 
 ## Quick start
 
-Download the desktop app from [openworklabs.com/download](https://openworklabs.com/download), grab the latest [GitHub release](https://github.com/different-ai/openwork/releases), or install from source below.
+Download the desktop app from the latest [GitHub release](https://github.com/different-ai/openwork/releases), or install from source below.
 
-- macOS and Linux downloads are available directly.
-- Windows access is currently handled through the paid support plan on [openworklabs.com/pricing#windows-support](https://openworklabs.com/pricing#windows-support).
-- Hosted OpenWork Cloud workers are launched from the web app after checkout, then connected from the desktop app via `Add a worker` -> `Connect remote`.
-
-## Code signing policy
-
-Free code signing provided by [SignPath.io](https://about.signpath.io), certificate by [SignPath Foundation](https://signpath.org).
-
-- Committers and reviewers: OpenWork repository collaborators with write access and approved maintainers in the [Different AI organization](https://github.com/orgs/different-ai/people).
-- Approvers: [Different AI organization owners](https://github.com/orgs/different-ai/people?query=role%3Aowner).
-- Privacy policy: [OpenWork Privacy Policy](https://openworklabs.com/privacy).
+- macOS downloads are available directly.
+- Windows and Linux builds can be produced from source (see Build from Source below).
+- For custom AI setup: Settings > AI > enter your API base URL and key > Save Configuration.
 
 ## Why
 
@@ -251,10 +247,6 @@ The App is available in the following languages:
 - Thai (`th`)
 - Vietnamese (`vi`)
 - Russian (`ru`)
-
-## For Teams & Businesses
-
-Interested in using OpenWork in your organization? We'd love to hear from you — reach out at [ben@openworklabs.com](mailto:ben@openworklabs.com) to chat about your use case.
 
 ## License
 
