@@ -103,8 +103,8 @@ export function AiSettingsView(props: AiSettingsViewProps) {
                   name: "Custom AI Provider",
                   options: {
                     baseURL: trimmedUrl,
+                    apiKey: trimmedKey || undefined,
                   },
-                  env: ["OPENAI_API_KEY"],
                   models: modelsObj,
                 },
               },
@@ -131,8 +131,8 @@ export function AiSettingsView(props: AiSettingsViewProps) {
                 name: "Custom AI Provider",
                 options: {
                   baseURL: trimmedUrl,
+                  apiKey: trimmedKey || undefined,
                 },
-                env: ["OPENAI_API_KEY"],
                 models: modelsObj,
               };
               await writeOpencodeConfig("project", props.workspaceRoot, JSON.stringify(parsed, null, 2));
