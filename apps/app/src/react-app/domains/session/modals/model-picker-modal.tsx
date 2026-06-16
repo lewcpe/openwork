@@ -233,38 +233,7 @@ export function ModelPickerModal(props: ModelPickerModalProps) {
             />
           </div>
 
-          {showOpenWorkModelsPromo ? (
-            <div className="mb-3 flex shrink-0 items-center overflow-hidden rounded-2xl border border-blue-6/60 bg-blue-2/60 shadow-[0_12px_30px_-20px_rgba(var(--dls-accent-rgb),0.45)]">
-              <button
-                type="button"
-                className="flex min-w-0 flex-1 items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-blue-3/70"
-                onClick={openOpenWorkModels}
-              >
-                <ProviderIcon providerId={OPENWORK_MODELS_PROVIDER_ID} providerName={OPENWORK_MODELS_PROVIDER_NAME} size={18} className="shrink-0 text-blue-11" />
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-1.5 text-[13px] font-medium text-dls-text">
-                    <Sparkles className="size-3.5 text-blue-11" />
-                    <span>{OPENWORK_MODELS_PROVIDER_NAME}</span>
-                  </div>
-                  <div className="truncate text-[11px] text-dls-secondary">
-                    {denAuth.isSignedIn ? "Subscribe to use hosted frontier models in this workspace." : "Sign in to unlock hosted frontier models for your team."}
-                  </div>
-                </div>
-                <span className="flex shrink-0 items-center gap-1 rounded-full border border-blue-6 bg-blue-3 px-2 py-0.5 text-[11px] font-medium text-blue-11">
-                  {denAuth.isSignedIn ? "Subscribe" : "Sign in"}
-                  <ArrowRight className="size-3" />
-                </span>
-              </button>
-              <button
-                type="button"
-                className="flex size-9 shrink-0 items-center justify-center border-l border-blue-6/60 text-blue-11 transition-colors hover:bg-blue-3/70"
-                onClick={hideOpenWorkModels}
-                aria-label="Hide OpenWork Models"
-              >
-                <X className="size-3.5" />
-              </button>
-            </div>
-          ) : null}
+          {showOpenWorkModelsPromo ? null : null}
 
           {/* Content */}
           <div className="min-h-0 flex-1 space-y-1 overflow-y-auto pr-1 -mr-1">
