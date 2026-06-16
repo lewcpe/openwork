@@ -8,7 +8,6 @@ import { useEffect, useMemo, useState } from "react";
 import { isDesktopProviderBlocked } from "@/app/cloud/desktop-app-restrictions";
 import type { Client, ModelOption } from "@/app/types";
 import { useCheckDesktopRestriction } from "@/react-app/domains/cloud/desktop-config-provider";
-import { useLocal } from "@/react-app/kernel/local-provider";
 import {
   ensureProviderListQuery,
   getConnectedProviderItems,
@@ -30,7 +29,6 @@ export type UseModelPickerInput = {
 export function useModelPicker(input: UseModelPickerInput) {
   const { client, baseUrl, workspaceRoot, onLoadError } = input;
   const checkDesktopRestriction = useCheckDesktopRestriction();
-  const { prefs } = useLocal();
 
   const [open, setOpen] = useState(false);
   const [compactOpen, setCompactOpen] = useState(false);
@@ -98,12 +96,10 @@ export function useModelPicker(input: UseModelPickerInput) {
         } catch {
           seenIds = new Set();
         }
-        const hasCustomProvider = Boolean(prefs.aiBaseUrl?.trim());
         const options: ModelOption[] = [];
-        const providers = getConnectedProviderItems(data).filter((provider) => {
-          if (!hasCustomProvider) return true;
-          return provider.id === "custom-openai";
-        });
+        const providers = getConnectedProviderItems(data).filter(
+          (provider) => provider.id === "custom-openai",
+        );
         for (const provider of providers) {
           const modelIds = Object.keys(provider.models);
           const isNew = !seenIds.has(provider.id) || recentProviderIds.has(provider.id);
