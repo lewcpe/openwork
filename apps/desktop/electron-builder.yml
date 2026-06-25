@@ -107,4 +107,5 @@ win:
         - versions.json-x86_64-pc-windows-msvc.exe
   target:
     - nsis
+    - portable
 artifactName: openwork-${os}-${arch}-${version}.${ext}
